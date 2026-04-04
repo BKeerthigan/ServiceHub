@@ -1,4 +1,14 @@
 package com.example.servicehub.data.model
 
-class TypeListResponse {
-}
+data class TypeListResponse(
+    val data: List<TypeItem>?,
+    val success: Int?,
+    val message: String?
+)
+
+data class TypeItem(
+    val type_id: String?,
+    val name: String?,
+    val descripition: String?,
+    val imgsrc: String?
+)
