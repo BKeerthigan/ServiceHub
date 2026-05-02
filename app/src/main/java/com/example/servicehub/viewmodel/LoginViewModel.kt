@@ -2,7 +2,9 @@ package com.example.servicehub.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.util.Log
 import com.example.servicehub.data.remote.ApiClient
+import com.example.servicehub.session.UserSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -33,7 +35,15 @@ class LoginViewModel : ViewModel() {
                     val first = body.data.firstOrNull()
 
                     val checkFlag = first?.check_flag  // "1", "0", or null
-                    val companyName = first?.company_name.orEmpty()
+
+                    Log.d("LOGIN_RAW", "Full login data object = $first")
+                    Log.d("LOGIN_RAW", "success=${body.success} Failed=${body.Failed} message=${body.message}")
+
+                    // Store company_id for cart API (fallback to phone number)
+                    UserSession.phone = mobile
+                    val resolvedId = first?.resolvedCompanyId()
+                    UserSession.companyId = if (!resolvedId.isNullOrBlank()) resolvedId else mobile
+                    Log.d("LOGIN_RAW", "company_id resolved = '${UserSession.companyId}'")
 
                     if (checkFlag == null) {
                         _uiState.value = LoginUiState.GoRegister(mobile)

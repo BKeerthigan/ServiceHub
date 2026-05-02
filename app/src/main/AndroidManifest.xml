@@ -31,6 +31,10 @@
         <activity android:name=".ui.home.HomeActivity" android:exported="false" />
         <activity android:name=".ui.food.FoodActivity" />
         <activity android:name=".ui.food.FoodItemListActivity" />
+        <activity android:name=".ui.food.ProductDetailsActivity" android:exported="false" />
+        <activity android:name=".ui.food.ItemDetailPageActivity" android:exported="false" />
+        <activity android:name=".ui.cart.CartDetailsActivity" android:exported="false" />
+        <activity android:name=".ui.policy.PolicyActivity" android:exported="false" />
     </application>
 
 </manifest>

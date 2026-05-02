@@ -1,10 +1,12 @@
 package com.example.servicehub.ui.food
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -23,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.example.servicehub.ui.cart.CartBar
+import com.example.servicehub.ui.cart.CartDetailsActivity
 import com.example.servicehub.viewmodel.FoodItemListViewModel
 
 private const val BASE_IMAGE_URL = "https://jmsn.in//images//appimage//"
@@ -43,12 +47,20 @@ class FoodItemListActivity : ComponentActivity() {
 
         val listId = intent.getStringExtra(EXTRA_LIST_ID).orEmpty()
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
-        Log.d("typeidddddd",listId);
+        Log.d("typeidddddd", listId)
         setContent {
             FoodItemListScreen(
                 listId = listId,
                 title = title,
-                onBack = { finish() }
+                onBack = { finish() },
+                onItemClick = { piid, itemTitle ->
+                    val intent = Intent(this, ProductDetailsActivity::class.java).apply {
+                        putExtra("listid", listId)
+                        putExtra("piid", piid)
+                        putExtra("title", itemTitle)
+                    }
+                    startActivity(intent)
+                }
             )
         }
     }
@@ -60,6 +72,7 @@ private fun FoodItemListScreen(
     listId: String,
     title: String,
     onBack: () -> Unit,
+    onItemClick: (piid: String, title: String) -> Unit,
     vm: FoodItemListViewModel = viewModel()
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -81,6 +94,14 @@ private fun FoodItemListScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            CartBar(onCartClick = {
+                context.startActivity(
+                    android.content.Intent(context, CartDetailsActivity::class.java)
+                )
+            })
         }
     ) { padding ->
 
@@ -140,7 +161,10 @@ private fun FoodItemListScreen(
                         items(state.items) { item ->
                             FoodItemCard(
                                 name = item.name.orEmpty(),
-                                imageUrl = fullImageUrl(item.imgsrc)
+                                imageUrl = fullImageUrl(item.imgsrc),
+                                onClick = {
+                                    onItemClick(item.piid.orEmpty(), item.name.orEmpty())
+                                }
                             )
                         }
 
@@ -157,13 +181,15 @@ private fun FoodItemListScreen(
 @Composable
 private fun FoodItemCard(
     name: String,
-    imageUrl: String?
+    imageUrl: String?,
+    onClick: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(14.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(190.dp),
+            .height(190.dp)
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(

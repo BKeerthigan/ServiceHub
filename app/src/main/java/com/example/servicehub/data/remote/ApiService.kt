@@ -2,6 +2,10 @@ package com.example.servicehub.remote
 
 
 import com.example.servicehub.data.model.AdListResponse
+import com.example.servicehub.data.model.CartDetailsResponse
+import com.example.servicehub.data.model.CartResponse
+import com.example.servicehub.data.model.CategoryListResponse
+import com.example.servicehub.data.model.ItemDetailResponse
 import com.example.servicehub.data.model.LoginResponse
 import com.example.servicehub.data.model.ProductDetailsResponse
 import com.example.servicehub.data.model.ProductItemResponse
@@ -52,4 +56,42 @@ interface ApiService {
     suspend fun getProductItems(
         @Query("listid") listId: String
     ): ProductItemResponse
+
+    @GET("mapi/sapiitemlistbyid.php")
+    suspend fun getItemList(
+        @Query("piid") piid: String
+    ): ItemDetailResponse
+
+    @GET("mapi/sapicategorylistbyid.php")
+    suspend fun getCategoryList(
+        @Query("piid") piid: String
+    ): CategoryListResponse
+
+    @GET("mapi/sapiitembyid.php")
+    suspend fun getItemById(
+        @Query("item_id") itemId: String
+    ): ItemDetailResponse
+
+    @GET("mapi/sapicartdetails.php")
+    suspend fun getCartDetails(
+        @Query("company_id") companyId: String
+    ): CartDetailsResponse
+
+    @FormUrlEncoded
+    @POST("mapi/sapicartadd.php")
+    suspend fun addToCart(
+        @Field("company_id") companyId: String,
+        @Field("item_id") itemId: String,
+        @Field("quantity") quantity: Int,
+        @Field("price") price: String
+    ): CartResponse
+
+    @FormUrlEncoded
+    @POST("mapi/sapicartdelete.php")
+    suspend fun removeFromCart(
+        @Field("company_id") companyId: String,
+        @Field("item_id") itemId: String,
+        @Field("quantity") quantity: Int,
+        @Field("price") price: String
+    ): CartResponse
 }
