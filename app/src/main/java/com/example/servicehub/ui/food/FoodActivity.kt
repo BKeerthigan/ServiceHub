@@ -21,11 +21,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.servicehub.data.model.ProductListItem
+import com.example.servicehub.ui.account.AccountActivity
 import com.example.servicehub.viewmodel.FoodViewModel
 import kotlin.math.ceil
 
@@ -83,6 +85,7 @@ private fun FoodScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
+    val ctx = LocalContext.current
 
     LaunchedEffect(typeId) {
         vm.loadFood(typeId = typeId)
@@ -97,7 +100,7 @@ private fun FoodScreen(
                 onFmcg = { /* later */ },
                 onCategories = { /* later */ },
                 onCart = { /* later */ },
-                onAccount = { /* later */ }
+                onAccount = { ctx.startActivity(Intent(ctx, AccountActivity::class.java)) }
             )
         }
     ) { padding ->

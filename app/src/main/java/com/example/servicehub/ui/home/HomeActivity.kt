@@ -27,6 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.servicehub.data.model.AdItem
 import com.example.servicehub.data.model.TypeItem
+import com.example.servicehub.ui.account.AccountActivity
 import com.example.servicehub.ui.food.FoodActivity
 import com.example.servicehub.viewmodel.HomeViewModel
 
@@ -79,7 +80,8 @@ fun HomeScreen(
             HomeBottomBar(
                 onHome = { /* stay */ },
                 onFood = { openFood("1") },
-                onFmcg = { openFood("2") } // later you can switch to FmcgActivity
+                onFmcg = { openFood("2") },
+                onAccount = { ctx.startActivity(Intent(ctx, AccountActivity::class.java)) }
             )
         }
     ) { padding ->
@@ -286,6 +288,7 @@ private fun HomeBottomBar(
     onHome: () -> Unit,
     onFood: () -> Unit,
     onFmcg: () -> Unit,
+    onAccount: () -> Unit,
 ) {
     var selectedIndex by rememberSaveable { mutableStateOf(0) }
 
@@ -307,7 +310,7 @@ private fun HomeBottomBar(
         }
         HomeNavItem("Account", Icons.Filled.AccountCircle, selectedIndex == 3) {
             selectedIndex = 3
-            // later open AccountActivity
+            onAccount()
         }
     }
 }

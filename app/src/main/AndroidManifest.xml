@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -35,6 +37,22 @@
         <activity android:name=".ui.food.ItemDetailPageActivity" android:exported="false" />
         <activity android:name=".ui.cart.CartDetailsActivity" android:exported="false" />
         <activity android:name=".ui.policy.PolicyActivity" android:exported="false" />
+        <activity android:name=".ui.policy.PDFViewerActivity" android:exported="false" />
+        <activity android:name=".ui.schemes.TargetSchemeActivity" android:exported="false" />
+        <activity android:name=".ui.account.AccountActivity" android:exported="false" />
+        <activity android:name=".ui.delivery.DeliveryActivity" android:exported="false" />
+        <activity android:name=".ui.delivery.CancelledDeliveryActivity" android:exported="false" />
+        <activity android:name=".ui.delivery.CancelledOrderDetailActivity" android:exported="false" />
+        <activity android:name=".ui.returns.ReturnActivity" android:exported="false" />
+        <activity android:name=".ui.returns.ReturnedOrdersActivity" android:exported="false" />
+        <activity android:name=".ui.expiry.ExpiryActivity" android:exported="false" />
+        <activity android:name=".ui.expiry.ExpiryReturnedActivity" android:exported="false" />
+        <activity android:name=".ui.account.AccountSettingsActivity" android:exported="false" />
+        <activity android:name=".ui.account.YourDetailsActivity" android:exported="false" />
+        <activity
+            android:name=".ui.account.EditAddressActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>

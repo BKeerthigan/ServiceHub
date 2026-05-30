@@ -62,6 +62,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     // 🔹 Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    // 🔹 Location
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

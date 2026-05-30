@@ -1,7 +1,24 @@
 package com.example.servicehub.remote
 
 
+import com.example.servicehub.data.model.AccountListResponse
 import com.example.servicehub.data.model.AdListResponse
+import com.example.servicehub.data.model.PolicyResponse
+import com.example.servicehub.data.model.SchemeListResponse
+import com.example.servicehub.data.model.TargetSchemeResponse
+import com.example.servicehub.data.model.AddExpiryReturnResponse
+import com.example.servicehub.data.model.EditAddressResponse
+import com.example.servicehub.data.model.EditNameResponse
+import com.example.servicehub.data.model.YourDetailsResponse
+import com.example.servicehub.data.model.ExpiryListResponse
+import com.example.servicehub.data.model.ExpiryReturnedResponse
+import com.example.servicehub.data.model.CancelDetailResponse
+import com.example.servicehub.data.model.CreateReturnResponse
+import com.example.servicehub.data.model.ReturnListResponse
+import com.example.servicehub.data.model.ReturnedOrdersResponse
+import com.example.servicehub.data.model.CancelReorderResponse
+import com.example.servicehub.data.model.CancelledListResponse
+import com.example.servicehub.data.model.DeliveryListResponse
 import com.example.servicehub.data.model.CartDetailsResponse
 import com.example.servicehub.data.model.CartResponse
 import com.example.servicehub.data.model.CategoryListResponse
@@ -85,6 +102,114 @@ interface ApiService {
         @Field("quantity") quantity: Int,
         @Field("price") price: String
     ): CartResponse
+
+    @GET("mapi/sapiaccountlist.php")
+    suspend fun getAccountList(
+        @Query("company_id") companyId: String
+    ): AccountListResponse
+
+    @GET("mapi/sapideliverylist.php")
+    suspend fun getDeliveryList(
+        @Query("company_id") companyId: String
+    ): DeliveryListResponse
+
+    @GET("mapi/sapireturnlist.php")
+    suspend fun getReturnList(
+        @Query("company_id") companyId: String
+    ): ReturnListResponse
+
+    @GET("mapi/sapireturnedorders.php")
+    suspend fun getReturnedOrders(
+        @Query("company_id") companyId: String
+    ): ReturnedOrdersResponse
+
+    @FormUrlEncoded
+    @POST("mapi/sapicreatereturn.php")
+    suspend fun createReturn(
+        @Field("sales_order_id") salesOrderId: String,
+        @Field("company_id") companyId: String,
+        @Field("item_id") itemId: String,
+        @Field("reason") reason: String,
+        @Field("quantity") quantity: Int
+    ): CreateReturnResponse
+
+    @GET("mapi/sapicancellist.php")
+    suspend fun getCancelledList(
+        @Query("company_id") companyId: String
+    ): CancelledListResponse
+
+    @GET("mapi/sapicanceldetails.php")
+    suspend fun getCancelDetails(
+        @Query("sales_order_id") salesOrderId: String
+    ): CancelDetailResponse
+
+    @FormUrlEncoded
+    @POST("mapi/sapicancelreorder.php")
+    suspend fun cancelOrReorder(
+        @Field("sales_order_id") salesOrderId: String,
+        @Field("reason") reason: String
+    ): CancelReorderResponse
+
+    @GET("mapi/sapiyourdetails.php")
+    suspend fun getYourDetails(
+        @Query("company_id") companyId: String
+    ): YourDetailsResponse
+
+    @FormUrlEncoded
+    @POST("mapi/sapieditname.php")
+    suspend fun editName(
+        @Field("company_id") companyId: String,
+        @Field("contact_name") contactName: String
+    ): EditNameResponse
+
+    @FormUrlEncoded
+    @POST("mapi/sapieditaddress.php")
+    suspend fun editAddress(
+        @Field("company_id") companyId: String,
+        @Field("address") address: String,
+        @Field("landmark") landmark: String,
+        @Field("city") city: String,
+        @Field("pincode") pincode: String,
+        @Field("latitude_number") latitude: String,
+        @Field("longitude_number") longitude: String
+    ): EditAddressResponse
+
+    @GET("mapi/sapiexpirylist.php")
+    suspend fun getExpiryList(
+        @Query("company_id") companyId: String
+    ): ExpiryListResponse
+
+    @GET("mapi/sapiexpiryreturned.php")
+    suspend fun getExpiryReturned(
+        @Query("company_id") companyId: String
+    ): ExpiryReturnedResponse
+
+    @FormUrlEncoded
+    @POST("mapi/sapiaddexpiryitem.php")
+    suspend fun addExpiryReturn(
+        @Field("sales_order_id") salesOrderId: String,
+        @Field("company_id") companyId: String,
+        @Field("item_id") itemId: String,
+        @Field("mfg_date") mfgDate: String,
+        @Field("exp_date") expDate: String,
+        @Field("quantity") quantity: Int
+    ): AddExpiryReturnResponse
+
+    @GET("mapi/sapipolicyinfo.php")
+    suspend fun getPolicyInfo(): PolicyResponse
+
+    @GET("mapi/sapitargetscheme.php")
+    suspend fun getTargetSchemeInfo(): TargetSchemeResponse
+
+    @GET("mapi/sapiactivescheme.php")
+    suspend fun getActiveSchemes(
+        @Query("company_id") companyId: String
+    ): SchemeListResponse
+
+    @GET("mapi/sapipastscheme.php")
+    suspend fun getPastSchemes(
+        @Query("company_id") companyId: String
+    ): SchemeListResponse
 
     @FormUrlEncoded
     @POST("mapi/sapicartdelete.php")
