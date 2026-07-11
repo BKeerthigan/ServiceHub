@@ -21,6 +21,10 @@ class AccountViewModel : ViewModel() {
     val state: StateFlow<AccountUiState> = _state
 
     fun load(companyId: String) {
+        if (companyId.isBlank()) {
+            _state.value = AccountUiState(loading = false, error = "Please complete registration to view account details.")
+            return
+        }
         viewModelScope.launch {
             _state.value = AccountUiState(loading = true)
             try {

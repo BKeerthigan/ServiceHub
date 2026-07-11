@@ -26,10 +26,11 @@ class ItemDetailPageViewModel : ViewModel() {
             _state.value = ItemDetailPageUiState(loading = true)
             try {
                 val response = repo.getItemById(itemId)
-                _state.value = ItemDetailPageUiState(
-                    loading = false,
-                    item = response.data.firstOrNull()
-                )
+                val raw = response.data.firstOrNull()
+                // sapiitembyid.php may not echo item_id back in the response body;
+                // fall back to the id we queried with so cart sync always has a valid id.
+                val item = if (raw != null && raw.itemId.isNullOrBlank()) raw.copy(itemId = itemId) else raw
+                _state.value = ItemDetailPageUiState(loading = false, item = item)
             } catch (e: Exception) {
                 _state.value = ItemDetailPageUiState(
                     loading = false,

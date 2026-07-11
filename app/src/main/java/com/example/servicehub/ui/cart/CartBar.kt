@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import com.example.servicehub.utils.rememberThrottledClick
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,6 +39,7 @@ fun CartBar(onCartClick: () -> Unit = {}) {
     val entries by CartManager.entries.collectAsStateWithLifecycle()
     val totalItems = entries.values.sumOf { it.quantity }
     val totalPrice = entries.values.sumOf { (it.price.toDoubleOrNull() ?: 0.0) * it.quantity }
+    val throttledCartClick = rememberThrottledClick(onCartClick)
 
     AnimatedVisibility(
         visible = totalItems > 0,
@@ -46,11 +49,12 @@ fun CartBar(onCartClick: () -> Unit = {}) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                .navigationBarsPadding()
+                .padding(start = 24.dp, end = 24.dp, top = 6.dp, bottom = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Button(
-                onClick = onCartClick,
+                onClick = throttledCartClick,
                 modifier = Modifier
                     .wrapContentWidth()
                     .height(52.dp),

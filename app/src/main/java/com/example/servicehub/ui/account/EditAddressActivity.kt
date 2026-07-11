@@ -45,6 +45,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.servicehub.session.UserSession
+import com.example.servicehub.utils.rememberThrottledClick
 import com.example.servicehub.viewmodel.AccountSettingsViewModel
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
@@ -73,17 +74,33 @@ class EditAddressActivity : ComponentActivity() {
 
         setContent {
             val vm: AccountSettingsViewModel = viewModel()
+            // If no extras passed, load from API so fields are pre-populated
+            LaunchedEffect(Unit) {
+                if (address.isBlank()) vm.load(UserSession.companyId)
+            }
+            val vmState by vm.state.collectAsStateWithLifecycle()
+            // Use intent extras if provided, otherwise fall back to API data
+            val resolvedContact = contactName.ifBlank { vmState.details?.contact_name.orEmpty() }
+            val resolvedCompany = companyName.ifBlank { vmState.details?.company_name.orEmpty() }
+            val resolvedAddress = address.ifBlank { vmState.details?.address.orEmpty() }
+            val resolvedLandmark = landmark.ifBlank { vmState.details?.landmark.orEmpty() }
+            val resolvedCity = city.ifBlank { vmState.details?.city.orEmpty() }
+            val resolvedPincode = pincode.ifBlank { vmState.details?.pincode.orEmpty() }
+
             EditAddressScreen(
                 vm           = vm,
                 companyId    = UserSession.companyId,
-                contactName  = contactName,
-                companyName  = companyName,
-                initAddress  = address,
-                initLandmark = landmark,
-                initCity     = city,
-                initPincode  = pincode,
+                contactName  = resolvedContact,
+                companyName  = resolvedCompany,
+                initAddress  = resolvedAddress,
+                initLandmark = resolvedLandmark,
+                initCity     = resolvedCity,
+                initPincode  = resolvedPincode,
                 onBack       = { finish() },
-                onSaved      = { finish() }
+                onSaved      = {
+                    setResult(Activity.RESULT_OK)
+                    finish()
+                }
             )
         }
     }
@@ -111,6 +128,13 @@ fun EditAddressScreen(
     var landmark  by remember { mutableStateOf(initLandmark) }
     var city      by remember { mutableStateOf(initCity) }
     var pincode   by remember { mutableStateOf(initPincode) }
+
+    // When extras are blank, initAddress etc. arrive async from the API load.
+    // remember only initialises once, so we sync here when the value first becomes non-blank.
+    LaunchedEffect(initAddress)  { if (address.isBlank()  && initAddress.isNotBlank())  address  = initAddress  }
+    LaunchedEffect(initLandmark) { if (landmark.isBlank() && initLandmark.isNotBlank()) landmark = initLandmark }
+    LaunchedEffect(initCity)     { if (city.isBlank()     && initCity.isNotBlank())     city     = initCity     }
+    LaunchedEffect(initPincode)  { if (pincode.isBlank()  && initPincode.isNotBlank())  pincode  = initPincode  }
     var latitude  by remember { mutableStateOf("") }
     var longitude by remember { mutableStateOf("") }
     var locStatus by remember { mutableStateOf(LocStatus.IDLE) }
@@ -305,21 +329,22 @@ fun EditAddressScreen(
 
                 Spacer(Modifier.height(4.dp))
 
+                val onSave = rememberThrottledClick {
+                    if (canSave) {
+                        saving = true
+                        vm.editAddress(
+                            companyId = companyId,
+                            address   = address,
+                            landmark  = landmark,
+                            city      = city,
+                            pincode   = pincode,
+                            latitude  = latitude,
+                            longitude = longitude
+                        )
+                    }
+                }
                 Button(
-                    onClick = {
-                        if (canSave) {
-                            saving = true
-                            vm.editAddress(
-                                companyId = companyId,
-                                address   = address,
-                                landmark  = landmark,
-                                city      = city,
-                                pincode   = pincode,
-                                latitude  = latitude,
-                                longitude = longitude
-                            )
-                        }
-                    },
+                    onClick = onSave,
                     enabled  = canSave,
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape    = RoundedCornerShape(28.dp),

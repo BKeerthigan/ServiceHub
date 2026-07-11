@@ -1,26 +1,34 @@
 package com.example.servicehub.ui.cart
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +38,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,6 +49,8 @@ import coil.compose.AsyncImage
 import com.example.servicehub.data.model.CartDetails
 import com.example.servicehub.data.model.CartItemFlat
 import com.example.servicehub.session.UserSession
+import com.example.servicehub.utils.rememberThrottledClick
+import com.example.servicehub.utils.throttledClickable
 import com.example.servicehub.viewmodel.CartDetailsViewModel
 
 private const val BASE_IMAGE_URL = "https://jmsn.in//images//appimage//"
@@ -66,9 +77,22 @@ private fun CartDetailsScreen(
     vm: CartDetailsViewModel = viewModel()
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val editAddressLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            vm.load(UserSession.companyId)
+            vm.fetchAddressDetails(UserSession.companyId)
+        }
+    }
 
     LaunchedEffect(Unit) {
         vm.load(UserSession.companyId)
+        vm.fetchAddressDetails(UserSession.companyId)
     }
 
     Scaffold(
@@ -105,7 +129,17 @@ private fun CartDetailsScreen(
         },
         bottomBar = {
             state.details?.let { details ->
-                CartBottomCheckout(details = details)
+                CartBottomCheckout(
+                    details = details,
+                    onViewBill = {
+                        val items = details.parsedItems()
+                        var billIndex = 1
+                        if (!details.delInfo.isNullOrBlank()) billIndex++
+                        billIndex++ // CartSectionHeader
+                        billIndex += items.size
+                        coroutineScope.launch { listState.animateScrollToItem(billIndex) }
+                    }
+                )
             }
         }
     ) { padding ->
@@ -136,16 +170,29 @@ private fun CartDetailsScreen(
                 }
             }
 
-            state.details != null -> {
+            state.details != null && state.details!!.parsedItems().isNotEmpty() -> {
                 CartContent(
                     details = state.details!!,
                     modifier = Modifier.padding(padding),
-                    vm = vm
+                    vm = vm,
+                    listState = listState,
+                    onChangeAddress = {
+                        val addr = state.addressDetails
+                        val intent = android.content.Intent(context, com.example.servicehub.ui.account.EditAddressActivity::class.java).apply {
+                            putExtra("contact_name", addr?.contact_name.orEmpty())
+                            putExtra("company_name", addr?.company_name.orEmpty())
+                            putExtra("address",      addr?.address.orEmpty())
+                            putExtra("landmark",     addr?.landmark.orEmpty())
+                            putExtra("city",         addr?.city.orEmpty())
+                            putExtra("pincode",      addr?.pincode.orEmpty())
+                        }
+                        editAddressLauncher.launch(intent)
+                    }
                 )
             }
 
-            else -> {
-                // API returned success but empty data — cart is empty
+            !state.loading -> {
+                // Cart is empty (API returned 0 items or no data)
                 Box(
                     Modifier.fillMaxSize().padding(padding),
                     contentAlignment = Alignment.Center
@@ -178,16 +225,19 @@ private fun CartDetailsScreen(
 private fun CartContent(
     details: CartDetails,
     modifier: Modifier = Modifier,
-    vm: CartDetailsViewModel
+    vm: CartDetailsViewModel,
+    listState: LazyListState = rememberLazyListState(),
+    onChangeAddress: () -> Unit = {}
 ) {
     val items = remember(details) { details.parsedItems() }
 
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = PaddingValues(vertical = 10.dp)
     ) {
-        item { DeliverToCard(address = details.companyAddress.orEmpty()) }
+        item { DeliverToCard(address = details.companyAddress.orEmpty(), onChangeAddress = onChangeAddress) }
 
         if (!details.delInfo.isNullOrBlank()) {
             item { DelayedDeliveryBanner(delInfo = details.delInfo) }
@@ -198,12 +248,9 @@ private fun CartContent(
         items(items) { item ->
             CartItemCard(
                 item = item,
-                onDelete = { itemId ->
-                    vm.deleteOne(
-                        itemId = itemId,
-                        price = item.price
-                    )
-                }
+                onRemove    = { vm.deleteItem(item.itemId, item.price) },
+                onIncrease  = { vm.addOne(item.itemId) },
+                onDecrease  = { vm.deleteOne(item.itemId, item.price) }
             )
         }
 
@@ -234,7 +281,7 @@ private fun CartContent(
 // ── Deliver To ──────────────────────────────────────────────────────────────
 
 @Composable
-private fun DeliverToCard(address: String) {
+private fun DeliverToCard(address: String, onChangeAddress: () -> Unit = {}) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -276,7 +323,8 @@ private fun DeliverToCard(address: String) {
                 text = "Change",
                 color = Color(0xFF1A56C4),
                 fontWeight = FontWeight.Bold,
-                fontSize = 13.sp
+                fontSize = 13.sp,
+                modifier = Modifier.throttledClickable { onChangeAddress() }
             )
         }
     }
@@ -492,7 +540,9 @@ private fun CartSectionHeader(count: Int) {
 @Composable
 private fun CartItemCard(
     item: CartItemFlat,
-    onDelete: (itemId: String) -> Unit
+    onRemove: () -> Unit,
+    onIncrease: () -> Unit,
+    onDecrease: () -> Unit
 ) {
     val qty = item.quantity.toIntOrNull() ?: 1
     val unitPrice = item.price.toDoubleOrNull() ?: 0.0
@@ -552,44 +602,62 @@ private fun CartItemCard(
             Divider(color = Color(0xFFF5F5F5))
             Spacer(Modifier.height(10.dp))
 
-            // Bottom row: [🗑 trash] [N Pc ▼] [₹total]
+            // Bottom row: [🗑 trash] [- qty +] [₹total]
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = { onDelete(item.itemId) },
+                    onClick = onRemove,
                     modifier = Modifier
                         .size(40.dp)
                         .background(Color(0xFFFFF3F3), RoundedCornerShape(8.dp))
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Delete,
-                        contentDescription = "Delete item",
+                        contentDescription = "Remove item",
                         tint = Color(0xFFD32F2F),
                         modifier = Modifier.size(20.dp)
                     )
                 }
 
-                OutlinedButton(
-                    onClick = {},
-                    shape = RoundedCornerShape(8.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCCCCCC)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF1A1A1A)),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                // Quantity stepper
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .background(Color(0xFFF5F5F5), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
+                    IconButton(
+                        onClick = onDecrease,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Remove,
+                            contentDescription = "Decrease",
+                            tint = Color(0xFFD32F2F),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                     Text(
-                        text = "$qty Pc",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
+                        text = "$qty",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        modifier = Modifier.widthIn(min = 28.dp),
+                        textAlign = TextAlign.Center
                     )
-                    Spacer(Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Filled.KeyboardArrowDown,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    IconButton(
+                        onClick = onIncrease,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = "Increase",
+                            tint = Color(0xFF2E7D32),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
 
                 Text(
@@ -768,7 +836,7 @@ private fun PolicyCard(cancellation: String, returns: String, readPolicy: String
 // ── Bottom Checkout Bar ───────────────────────────────────────────────────────
 
 @Composable
-private fun CartBottomCheckout(details: CartDetails) {
+private fun CartBottomCheckout(details: CartDetails, onViewBill: () -> Unit) {
     val items = remember(details) { details.parsedItems() }
     val itemsTotal = items.sumOf {
         (it.price.toDoubleOrNull() ?: 0.0) * (it.quantity.toIntOrNull() ?: 1)
@@ -776,10 +844,20 @@ private fun CartBottomCheckout(details: CartDetails) {
     val isFreeShipping = details.shippingCharge.equals("Free", ignoreCase = true)
     val shipping = if (isFreeShipping) 0.0 else details.shipping?.toDoubleOrNull() ?: 0.0
     val grandTotal = itemsTotal + shipping
+    var proceedClicked by remember { mutableStateOf(false) }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    androidx.compose.runtime.DisposableEffect(lifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) proceedClicked = false
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
 
     Surface(
         color = Color.White,
-        shadowElevation = 8.dp
+        shadowElevation = 8.dp,
+        modifier = Modifier.navigationBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Free delivery progress hint
@@ -831,14 +909,40 @@ private fun CartBottomCheckout(details: CartDetails) {
                         fontSize = 11.sp,
                         color = Color(0xFF1A56C4),
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.clickable { onViewBill() }
                     )
                 }
 
+                val context = androidx.compose.ui.platform.LocalContext.current
+                // Allow flag="0" and flag="1" users through; only null (never registered) goes to Register
+                val canProceed = com.example.servicehub.session.UserSession.loginFlag != null
+                val onProceed = rememberThrottledClick {
+                    if (!proceedClicked && items.isNotEmpty()) {
+                        proceedClicked = true
+                        if (canProceed) {
+                            context.startActivity(
+                                android.content.Intent(context, com.example.servicehub.ui.payment.ProceedToBuyActivity::class.java)
+                                    .putExtra("total_amount", String.format("%.2f", grandTotal))
+                            )
+                        } else {
+                            context.startActivity(
+                                android.content.Intent(context, com.example.servicehub.ui.register.RegisterActivity::class.java)
+                                    .putExtra("phone", com.example.servicehub.session.UserSession.phone)
+                            )
+                            proceedClicked = false
+                        }
+                    }
+                }
                 Button(
-                    onClick = {},
+                    onClick = onProceed,
+                    enabled = items.isNotEmpty() && !proceedClicked,
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFD32F2F),
+                        disabledContainerColor = Color(0xFFDDDDDD),
+                        disabledContentColor = Color(0xFF888888)
+                    ),
                     modifier = Modifier
                         .height(50.dp)
                         .padding(start = 12.dp)

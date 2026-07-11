@@ -33,6 +33,10 @@ class DeliveryRepository {
         return api.getCancelDetails(salesOrderId).data?.firstOrNull()
     }
 
+    suspend fun getDeliveryDetail(salesOrderId: String): CancelDetailData? {
+        return api.getDeliveryDetails(salesOrderId).data?.firstOrNull()
+    }
+
     suspend fun cancelOrReorder(salesOrderId: String, reason: String): String {
         val response = api.cancelOrReorder(salesOrderId, reason)
         return response.data?.firstOrNull()?.action.orEmpty()

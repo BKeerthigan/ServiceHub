@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.servicehub.ui.home.HomeActivity
 import com.example.servicehub.ui.register.RegisterActivity
+import com.example.servicehub.utils.rememberThrottledClick
 import com.example.servicehub.viewmodel.LoginUiState
 import com.example.servicehub.viewmodel.LoginViewModel
 
@@ -127,9 +128,10 @@ fun LoginScreen(viewModel: LoginViewModel) {
 
             val isLoading = state is LoginUiState.Loading
             val enableBtn = mobileNumber.length == 10 && !isLoading
+            val onLogin = rememberThrottledClick { viewModel.login(mobileNumber) }
 
             Button(
-                onClick = { viewModel.login(mobileNumber) },
+                onClick = onLogin,
                 enabled = enableBtn,
                 modifier = Modifier
                     .fillMaxWidth()

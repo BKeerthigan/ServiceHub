@@ -3,6 +3,7 @@ package com.example.servicehub.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.util.Log
+import com.example.servicehub.cart.CartManager
 import com.example.servicehub.data.remote.ApiClient
 import com.example.servicehub.session.UserSession
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,11 +40,15 @@ class LoginViewModel : ViewModel() {
                     Log.d("LOGIN_RAW", "Full login data object = $first")
                     Log.d("LOGIN_RAW", "success=${body.success} Failed=${body.Failed} message=${body.message}")
 
-                    // Store company_id for cart API (fallback to phone number)
+                    // Clear cart only if a DIFFERENT user is logging in (compare against persisted phone)
+                    val lastPhone = CartManager.getLastPhone()
+                    if (lastPhone.isNotBlank() && lastPhone != mobile) CartManager.clear()
+                    CartManager.saveLastPhone(mobile)
                     UserSession.phone = mobile
+                    UserSession.loginFlag = checkFlag
                     val resolvedId = first?.resolvedCompanyId()
-                    UserSession.companyId = if (!resolvedId.isNullOrBlank()) resolvedId else mobile
-                    Log.d("LOGIN_RAW", "company_id resolved = '${UserSession.companyId}'")
+                    UserSession.companyId = resolvedId.orEmpty()
+                    Log.d("LOGIN_RAW", "company_id resolved = '${UserSession.companyId}' flag='$checkFlag'")
 
                     if (checkFlag == null) {
                         _uiState.value = LoginUiState.GoRegister(mobile)

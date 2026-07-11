@@ -15,8 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
+import com.example.servicehub.session.UserSession
+import com.example.servicehub.ui.home.HomeActivity
 import com.example.servicehub.ui.login.LoginActivity
-
 
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -29,9 +30,13 @@ public class SplashActivity : ComponentActivity(){
         }
 
         lifecycleScope.launch {
-            delay(3000) // 3 seconds
-            startActivity(Intent(this@SplashActivity, LoginActivity::class.java))
-            finish() // remove from backstack
+            delay(3000)
+            // If the user was already logged in (flag "0" or "1"), go straight to Home.
+            // Only send to Login when there is no saved session (flag is null).
+            val destination = if (UserSession.loginFlag != null) HomeActivity::class.java
+                              else LoginActivity::class.java
+            startActivity(Intent(this@SplashActivity, destination))
+            finish()
         }
     }
 

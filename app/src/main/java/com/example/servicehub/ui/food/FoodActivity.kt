@@ -23,11 +23,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.servicehub.data.model.ProductListItem
 import com.example.servicehub.ui.account.AccountActivity
+import com.example.servicehub.ui.cart.CartDetailsActivity
 import com.example.servicehub.viewmodel.FoodViewModel
 import kotlin.math.ceil
 
@@ -99,7 +101,7 @@ private fun FoodScreen(
                 onFood = { /* already here */ },
                 onFmcg = { /* later */ },
                 onCategories = { /* later */ },
-                onCart = { /* later */ },
+                onCart = { ctx.startActivity(Intent(ctx, CartDetailsActivity::class.java)) },
                 onAccount = { ctx.startActivity(Intent(ctx, AccountActivity::class.java)) }
             )
         }
@@ -266,10 +268,35 @@ private fun FoodBottomBar(
     onCart: () -> Unit,
     onAccount: () -> Unit
 ) {
+    val entries by com.example.servicehub.cart.CartManager.entries.collectAsStateWithLifecycle()
+    val cartCount = entries.values.sumOf { it.quantity }
+
     NavigationBar(containerColor = Color.White) {
         NavItem("Food", Icons.Filled.Store, selected == BottomTab.FOOD, onFood)
         NavItem("Categories", Icons.Filled.GridView, selected == BottomTab.CATEGORIES, onCategories)
-        NavItem("Cart", Icons.Filled.ShoppingCart, selected == BottomTab.CART, onCart)
+
+        // Cart with badge
+        NavigationBarItem(
+            selected = selected == BottomTab.CART,
+            onClick  = onCart,
+            icon = {
+                BadgedBox(badge = {
+                    if (cartCount > 0) {
+                        Badge(containerColor = Color(0xFFCC0000)) {
+                            Text(
+                                text  = if (cartCount > 99) "99+" else "$cartCount",
+                                color = Color.White,
+                                fontSize = 9.sp
+                            )
+                        }
+                    }
+                }) {
+                    Icon(Icons.Filled.ShoppingCart, contentDescription = "Cart")
+                }
+            },
+            label = { Text("Cart") }
+        )
+
         NavItem("Account", Icons.Filled.AccountCircle, selected == BottomTab.ACCOUNT, onAccount)
     }
 }

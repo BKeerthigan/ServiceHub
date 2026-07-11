@@ -25,11 +25,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.example.servicehub.cart.CartManager
 import com.example.servicehub.data.model.AdItem
 import com.example.servicehub.data.model.TypeItem
+import com.example.servicehub.data.remote.ApiClient
+import com.example.servicehub.session.UserSession
 import com.example.servicehub.ui.account.AccountActivity
 import com.example.servicehub.ui.food.FoodActivity
 import com.example.servicehub.viewmodel.HomeViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 private const val BASE_IMAGE_URL = "https://jmsn.in//images//appimage//"
 private val HOME_BG = Color(0xFFF7F7F7)
@@ -46,11 +52,31 @@ class HomeActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val contactName = intent.getStringExtra("contact_name")
-        val address = intent.getStringExtra("address")
+        val address     = intent.getStringExtra("address")
+
+        // Sync CartManager from server so CartBar shows correct count after login
+        syncCartFromServer()
 
         setContent {
             val vm: HomeViewModel = viewModel()
             HomeScreen(contactName = contactName, address = address, vm = vm)
+        }
+    }
+
+    private fun syncCartFromServer() {
+        CoroutineScope(Dispatchers.IO).launch {
+            runCatching {
+                val response = ApiClient.apiService.getCartDetails(UserSession.companyId)
+                val items = response.data.firstOrNull()?.parsedItems() ?: return@runCatching
+                // Only sync if CartManager is currently empty (don't overwrite active session)
+                if (CartManager.entries.value.isEmpty()) {
+                    items.forEach { item ->
+                        repeat(item.quantity.toIntOrNull() ?: 1) {
+                            CartManager.addOne(item.itemId, item.name, item.price)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -304,7 +330,7 @@ private fun HomeBottomBar(
             selectedIndex = 1
             onFood()
         }
-        HomeNavItem("FMCG", Icons.Filled.ShoppingCart, selectedIndex == 2) {
+        HomeNavItem("FMCG", Icons.Filled.Storefront, selectedIndex == 2) {
             selectedIndex = 2
             onFmcg()
         }

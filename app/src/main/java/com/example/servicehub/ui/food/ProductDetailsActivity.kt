@@ -623,25 +623,6 @@ private fun ProductCard(
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                     )
 
-                    // Blue + button overlaid on image (bottom right)
-                    if (inStock && qty == 0) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF1A56C4))
-                                .clickable { onAddToCart() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Add,
-                                contentDescription = "Add to cart",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
                 }
             }
 

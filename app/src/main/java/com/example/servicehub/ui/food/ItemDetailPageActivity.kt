@@ -1,6 +1,7 @@
 package com.example.servicehub.ui.food
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -140,37 +141,46 @@ private fun ItemDetailPageScreen(
                             item.itemPrice.orEmpty()
                         )
                         val newQty = CartManager.getQuantity(item.itemId.orEmpty())
+                        Log.d("CartAdd", "ADD → company=${UserSession.companyId} item=${item.itemId} qty=$newQty price=${item.itemPrice}")
                         scope.launch {
                             runCatching {
-                                cartRepo.addToCart(
+                                val resp = cartRepo.addToCart(
                                     UserSession.companyId,
                                     item.itemId.orEmpty(),
                                     newQty,
                                     item.itemPrice.orEmpty()
                                 )
+                                Log.d("CartAdd", "ADD response → success=${resp.success} message=${resp.message}")
+                            }.onFailure { e ->
+                                Log.e("CartAdd", "ADD FAILED → ${e.message}", e)
                             }
                         }
                     },
                     onRemoveFromCart = { item ->
                         CartManager.removeOne(item.itemId.orEmpty())
                         val newQty = CartManager.getQuantity(item.itemId.orEmpty())
+                        Log.d("CartAdd", "REMOVE → company=${UserSession.companyId} item=${item.itemId} qty=$newQty price=${item.itemPrice}")
                         scope.launch {
                             runCatching {
                                 if (newQty == 0) {
-                                    cartRepo.removeFromCart(
+                                    val resp = cartRepo.removeFromCart(
                                         UserSession.companyId,
                                         item.itemId.orEmpty(),
                                         1,
                                         item.itemPrice.orEmpty()
                                     )
+                                    Log.d("CartAdd", "REMOVE response → success=${resp.success} message=${resp.message}")
                                 } else {
-                                    cartRepo.addToCart(
+                                    val resp = cartRepo.addToCart(
                                         UserSession.companyId,
                                         item.itemId.orEmpty(),
                                         newQty,
                                         item.itemPrice.orEmpty()
                                     )
+                                    Log.d("CartAdd", "UPDATE response → success=${resp.success} message=${resp.message}")
                                 }
+                            }.onFailure { e ->
+                                Log.e("CartAdd", "REMOVE/UPDATE FAILED → ${e.message}", e)
                             }
                         }
                     }

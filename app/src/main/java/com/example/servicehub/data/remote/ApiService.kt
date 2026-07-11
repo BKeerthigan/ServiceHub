@@ -2,6 +2,10 @@ package com.example.servicehub.remote
 
 
 import com.example.servicehub.data.model.AccountListResponse
+import com.example.servicehub.data.model.OrderDetailsResponse
+import com.example.servicehub.data.model.PlaceOrderResponse
+import com.example.servicehub.data.model.ProceedToBuyResponse
+import com.example.servicehub.data.model.QrCodeResponse
 import com.example.servicehub.data.model.AdListResponse
 import com.example.servicehub.data.model.PolicyResponse
 import com.example.servicehub.data.model.SchemeListResponse
@@ -53,7 +57,11 @@ interface ApiService {
         @Field("address") address: String,
         @Field("landmark") landmark: String,
         @Field("city") city: String,
-        @Field("pincode") pincode: String
+        @Field("pincode") pincode: String,
+        @Field("latitude_number") latitude: String,
+        @Field("longitude_number") longitude: String,
+        @Field("sales_lead") salesLead: Int,
+        @Field("sales_person") salesPerson: Int
     ): Response<RegisterResponse>
 
 
@@ -143,6 +151,11 @@ interface ApiService {
         @Query("sales_order_id") salesOrderId: String
     ): CancelDetailResponse
 
+    @GET("mapi/sapideliverydetails.php")
+    suspend fun getDeliveryDetails(
+        @Query("sales_order_id") salesOrderId: String
+    ): CancelDetailResponse
+
     @FormUrlEncoded
     @POST("mapi/sapicancelreorder.php")
     suspend fun cancelOrReorder(
@@ -219,4 +232,35 @@ interface ApiService {
         @Field("quantity") quantity: Int,
         @Field("price") price: String
     ): CartResponse
+
+    @GET("mapi/sapiproceedtobuy.php")
+    suspend fun getProceedToBuyInfo(
+        @Query("mobile_app") mobileApp: String
+    ): ProceedToBuyResponse
+
+    @FormUrlEncoded
+    @POST("mapi/sapicodorder.php")
+    suspend fun placeCodOrder(
+        @Field("company_id") companyId: String,
+        @Field("latitude_number") lat: String,
+        @Field("longitude_number") lng: String
+    ): PlaceOrderResponse
+
+    @GET("mapi/sapiorderdetails.php")
+    suspend fun getOrderDetails(
+        @Query("sales_order_id") salesOrderId: String
+    ): OrderDetailsResponse
+
+    @GET("mapi/sapiqrcodedetails.php")
+    suspend fun getQrCode(): QrCodeResponse
+
+    @FormUrlEncoded
+    @POST("mapi/sapiqrorder.php")
+    suspend fun placeQrOrder(
+        @Field("company_id")        companyId: String,
+        @Field("latitude_number")   lat: String,
+        @Field("longitude_number")  lng: String,
+        @Field("trans_ref")         transRef: String,
+        @Field("trans_date")        transDate: String
+    ): PlaceOrderResponse
 }

@@ -30,6 +30,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.servicehub.data.model.AccountData
 import com.example.servicehub.session.UserSession
+import com.example.servicehub.utils.rememberThrottledClick
+import com.example.servicehub.utils.throttledClickable
 import com.example.servicehub.ui.delivery.DeliveryActivity
 import com.example.servicehub.ui.returns.ReturnActivity
 import com.example.servicehub.viewmodel.AccountViewModel
@@ -55,6 +57,30 @@ class AccountActivity : ComponentActivity() {
 fun AccountScreen(vm: AccountViewModel) {
     val state by vm.state.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Logout") },
+            text  = { Text("Are you sure you want to logout?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    com.example.servicehub.session.UserSession.clear()
+                    com.example.servicehub.cart.CartManager.clear()
+                    com.example.servicehub.cart.CartManager.saveLastPhone("")
+                    val intent = android.content.Intent(ctx, com.example.servicehub.ui.login.LoginActivity::class.java)
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    ctx.startActivity(intent)
+                }) { Text("Logout", color = BRAND_RED) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     Scaffold(
         containerColor = PAGE_BG,
         bottomBar = { AccountBottomBar() }
@@ -66,7 +92,7 @@ fun AccountScreen(vm: AccountViewModel) {
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             item {
-                AccountHeader(data = state.data)
+                AccountHeader(data = state.data, onLogout = { showLogoutDialog = true })
             }
 
             item { Spacer(Modifier.height(12.dp)) }
@@ -79,13 +105,58 @@ fun AccountScreen(vm: AccountViewModel) {
                 }
             }
 
-            state.error?.let {
+            state.error?.let { errorMsg ->
                 item {
-                    Text(
-                        "Error: $it",
-                        color = Color.Red,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    val isRegistrationRequired = errorMsg.contains("registration", ignoreCase = true)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(2.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    text = if (isRegistrationRequired) "⚠️" else "❌",
+                                    fontSize = 40.sp
+                                )
+                                Text(
+                                    text = if (isRegistrationRequired)
+                                        "Your account is not fully set up. Please complete registration to access all features."
+                                    else
+                                        errorMsg,
+                                    color = Color(0xFF444444),
+                                    fontSize = 14.sp,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                if (isRegistrationRequired) {
+                                    val onCompleteReg = rememberThrottledClick {
+                                        val phone = com.example.servicehub.session.UserSession.phone
+                                        val intent = android.content.Intent(ctx, com.example.servicehub.ui.register.RegisterActivity::class.java)
+                                        intent.putExtra("phone", phone)
+                                        ctx.startActivity(intent)
+                                    }
+                                    Button(
+                                        onClick = onCompleteReg,
+                                        colors = ButtonDefaults.buttonColors(containerColor = BRAND_RED),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Complete Registration", color = Color.White, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -131,7 +202,7 @@ fun AccountScreen(vm: AccountViewModel) {
 }
 
 @Composable
-private fun AccountHeader(data: AccountData?) {
+private fun AccountHeader(data: AccountData?, onLogout: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -158,6 +229,14 @@ private fun AccountHeader(data: AccountData?) {
                 }
             }
 
+            IconButton(onClick = onLogout) {
+                Icon(
+                    imageVector = Icons.Filled.Logout,
+                    contentDescription = "Logout",
+                    tint = Color.White,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
         }
     }
 }
@@ -208,10 +287,11 @@ private fun ManageBusinessCard(account: AccountData) {
 
 @Composable
 private fun MenuRow(label: String, icon: ImageVector, onClick: () -> Unit) {
+    val throttledOnClick = rememberThrottledClick(onClick)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = throttledOnClick)
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -278,14 +358,14 @@ private fun SupportCard(account: AccountData) {
                         Text(number, fontSize = 13.sp, color = Color.Gray)
                     }
                 }
+                val onCallNow = rememberThrottledClick {
+                    if (available && number.isNotBlank()) {
+                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number"))
+                        ctx.startActivity(intent)
+                    }
+                }
                 Button(
-                    onClick = {
-                        if (available && number.isNotBlank()) {
-                            val intent = Intent(Intent.ACTION_DIAL,
-                                Uri.parse("tel:$number"))
-                            ctx.startActivity(intent)
-                        }
-                    },
+                    onClick = onCallNow,
                     enabled = available,
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -373,7 +453,7 @@ private fun AppInfoCard(ctx: Context) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable {
+                    .throttledClickable {
                         ctx.cacheDir?.deleteRecursively()
                         cacheSizeMb = "0"
                     }
@@ -402,7 +482,6 @@ private fun folderSize(dir: File): Long {
 
 @Composable
 private fun AccountBottomBar() {
-    var selectedIndex by rememberSaveable { mutableStateOf(3) }
     val ctx = LocalContext.current
 
     NavigationBar(
@@ -412,30 +491,40 @@ private fun AccountBottomBar() {
         AccountNavItem(
             label = "HOME",
             icon = Icons.Filled.Home,
-            selected = selectedIndex == 0,
+            selected = false,
             selectedColor = BRAND_RED
-        ) { selectedIndex = 0 /* TODO: open HomeActivity */ }
+        ) {
+            val intent = Intent(ctx, com.example.servicehub.ui.home.HomeActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            ctx.startActivity(intent)
+        }
 
         AccountNavItem(
             label = "CATEGORIES",
             icon = Icons.Filled.GridView,
-            selected = selectedIndex == 1,
+            selected = false,
             selectedColor = BRAND_RED
-        ) { selectedIndex = 1 /* TODO: open CategoriesActivity */ }
+        ) {
+            val intent = Intent(ctx, com.example.servicehub.ui.home.HomeActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            ctx.startActivity(intent)
+        }
 
         AccountNavItem(
             label = "CART",
             icon = Icons.Filled.ShoppingCart,
-            selected = selectedIndex == 2,
+            selected = false,
             selectedColor = BRAND_RED
-        ) { selectedIndex = 2 /* TODO: open CartDetailsActivity */ }
+        ) {
+            ctx.startActivity(Intent(ctx, com.example.servicehub.ui.cart.CartDetailsActivity::class.java))
+        }
 
         AccountNavItem(
             label = "ACCOUNT",
             icon = Icons.Filled.AccountCircle,
-            selected = selectedIndex == 3,
+            selected = true,
             selectedColor = BRAND_RED
-        ) { selectedIndex = 3 }
+        ) { /* already here */ }
     }
 }
 
@@ -447,9 +536,10 @@ private fun RowScope.AccountNavItem(
     selectedColor: Color,
     onClick: () -> Unit
 ) {
+    val throttledOnClick = rememberThrottledClick(onClick)
     NavigationBarItem(
         selected = selected,
-        onClick = onClick,
+        onClick = throttledOnClick,
         icon = {
             Icon(imageVector = icon, contentDescription = label)
         },

@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -123,7 +124,13 @@ fun DeliveryScreen(vm: DeliveryViewModel, companyId: String, onBack: () -> Unit)
                         DeliveryCard(
                             order = order,
                             onCancel = { cancelTarget = it },
-                            onReorder = { vm.submitAction(it.salesOrderId, "Reorder", companyId) }
+                            onReorder = { vm.submitAction(it.salesOrderId, "Reorder", companyId) },
+                            onViewDetails = {
+                                ctx.startActivity(
+                                    android.content.Intent(ctx, DeliveryDetailsActivity::class.java)
+                                        .putExtra("sales_order_id", it.salesOrderId)
+                                )
+                            }
                         )
                     }
                 }
@@ -178,7 +185,8 @@ private fun EmptyDeliveryState(modifier: Modifier = Modifier) {
 fun DeliveryCard(
     order: DeliveryItem,
     onCancel: (DeliveryItem) -> Unit,
-    onReorder: (DeliveryItem) -> Unit
+    onReorder: (DeliveryItem) -> Unit,
+    onViewDetails: (DeliveryItem) -> Unit = {}
 ) {
     val statusColor = when (order.delMessage.lowercase()) {
         "pending"          -> STATUS_ORANGE
@@ -231,9 +239,26 @@ fun DeliveryCard(
                     Text("Date", fontSize = 11.sp, color = Color.Gray)
                     Text(order.orderDate, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("Order Amount", fontSize = 11.sp, color = Color.Gray)
-                    Text("₹${order.netValue}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("Order Amount", fontSize = 11.sp, color = Color.Gray)
+                        Text("₹${order.netValue}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(
+                        onClick = { onViewDetails(order) },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.ArrowForwardIos,
+                            contentDescription = "View Details",
+                            tint = Color.Gray,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
             }
 
